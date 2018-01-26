@@ -11,7 +11,7 @@
 #############################
 ##### IMPORT STATEMENTS #####
 #############################
-from flask import Flask, request, render_template, url_for
+from flask import Flask, request, render_template, url_for, flash, redirect
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, RadioField, ValidationError
 from wtforms.validators import Required
@@ -23,13 +23,14 @@ import requests
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'hardtoguessstring'
-
+app.debug = True
 ####################
 ###### FORMS #######
 ####################
-
-
-
+class AlbumEntryForm(FlaskForm):
+	name = StringField('Enter the name of an album:', validators=[Required()])
+	likes = RadioField("How much do you like this album? (1 low, 3 high)", choices = [("1", "1" ), ("2", "2"), ("3", "3")], validators=[Required()])
+	submit = SubmitField("Submit")
 
 ####################
 ###### ROUTES ######
@@ -64,5 +65,19 @@ def specific_artist(artistName):
 	results = requests.get("https://itunes.apple.com/search?term=" + artistName).json()
 	return render_template("specific_artist.html", results = results["results"])
 
+@app.route("/album_entry")
+def album_entry():
+	simpleForm = AlbumEntryForm()
+	return render_template("album_entry.html", form = simpleForm)
+
+@app.route("/album_result", methods = ['GET', 'POST'])
+def album_result():
+	secondForm = AlbumEntryForm(request.form)
+	if request.method == 'POST' and secondForm.validate_on_submit():
+		name = secondForm.name.data
+		likes = secondForm.likes.data
+		return render_template("album_data.html", name = name, likes = likes, form = secondForm)
+	flash('All fields are required!')
+	return redirect(url_for('album_entry'))
 if __name__ == '__main__':
     app.run(use_reloader=True,debug=True)
